@@ -550,8 +550,6 @@ router.post("/get-files", authenticateToken, async (req, res) => {
     if (!folder_id) {
       return res.status(400).json({ message: "Folder ID is required." });
     }
-
-    // Fetch the folder to verify access
     const folder = await Folder.findOne({ _id: folder_id, user_id: user_id });
     if (!folder) {
       return res.status(404).json({ message: "Folder not found or access denied." });
@@ -559,7 +557,23 @@ router.post("/get-files", authenticateToken, async (req, res) => {
 
     const folderName = decryptField(folder.folder_name, folder.iv_folder_name);
 
-    // Fetch files in the folder
+
+    let currentFolder = folder;
+    const pathParts = [folderName];
+    while (currentFolder.parent_folder_id) {
+      currentFolder = await Folder.findOne({
+        _id: currentFolder.parent_folder_id,
+        user_id: user_id,
+      });
+      if (currentFolder) {
+        const parentName = decryptField(currentFolder.folder_name, currentFolder.iv_folder_name);
+        pathParts.unshift(parentName); // Add to the beginning
+      } else {
+        break;
+      }
+    }
+    const fullPath = "/" + pathParts.join("/");
+
     const files = await File.find({ folder_id: folder_id });
 
     const decryptedFiles = await Promise.all(
@@ -605,7 +619,6 @@ router.post("/get-files", authenticateToken, async (req, res) => {
       })
     );
 
-    // 🆕 Fetch subfolders of the current folder
     const subfolders = await Folder.find({ parent_folder_id: folder_id, user_id });
 
     const decryptedSubfolders = subfolders.map((subfolder) => {
@@ -622,6 +635,7 @@ router.post("/get-files", authenticateToken, async (req, res) => {
     res.status(200).json({
       files: decryptedFiles,
       subfolders: decryptedSubfolders,
+      path: fullPath,
     });
   } catch (error) {
     console.error("Error retrieving files:", error);
@@ -636,8 +650,8 @@ router.get("/get-all-files", authenticateToken, async (req, res) => {
     const user_id = req.user.user_id;
     const files = await File.find({ user_id: user_id }).populate({
       path: "folder_id",
-      select: "folder_name iv_folder_name", 
-    }).lean();  // Using lean() for performance
+      select: "folder_name iv_folder_name parent_folder_id", 
+    }).lean();
     if (!files || files.length === 0) {
       return res.status(404).json({ message: "No files found for this user." });
     }
@@ -663,7 +677,6 @@ router.get("/get-all-files", authenticateToken, async (req, res) => {
       }
     };
     const getAccessDetails = async (fileId) => {
-      // Fetch shared file records related to the current file
       const sharedFileRecords = await UserSharedFile.find({
         "files.file_id": fileId,
       }).lean(); // Using lean() for performance
@@ -691,16 +704,43 @@ router.get("/get-all-files", authenticateToken, async (req, res) => {
         })
       );
     };
+
+    const buildFullPath = async (folder) => {
+      const pathParts = [];
+      let currentFolder = folder;
+
+      // 🔁 Traverse up the folder tree until we hit a root folder (where parent_folder_id is null)
+      while (currentFolder) {
+        const decryptedName = decryptField(currentFolder.folder_name, currentFolder.iv_folder_name);
+        pathParts.unshift(decryptedName); // Add current folder name at the beginning
+
+        if (!currentFolder.parent_folder_id) break; // Reached root folder
+
+        // ⬆️ Move to parent folder for next iteration
+        currentFolder = await Folder.findById(currentFolder.parent_folder_id).lean();
+      }
+
+      // 📂 Final path like /Parent/Child/SubChild
+      return "/" + pathParts.join("/");
+    };
+
     const decryptedFiles = await Promise.all(
       files.map(async (file) => {
         const { file_name, aws_file_link, folder_name } = decryptFileDetails(file);
         const accessDetails = await getAccessDetails(file._id);
+        let folderPath = "/";
+
+        if (file.folder_id) {
+          folderPath = await buildFullPath(file.folder_id);
+        }
+
         return {
           ...file,
           file_name,
           aws_file_link,
           folder_name,
-          access_details: accessDetails, // Include access details for the file
+          path: folderPath,
+          access_details: accessDetails, 
         };
       })
     );

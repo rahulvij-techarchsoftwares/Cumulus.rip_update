@@ -2184,7 +2184,7 @@ const Dashboard = ({ folderId, onFolderSelect, searchQuery }) => {
                     ? "All Files"
                     : folderId === 1
                     ? "Cumulus"
-                    : sortedFiles[sortedFiles.length - 1].folder_name}
+                    : files.path}
                 </span>
                 <span className="text-black rounded-lg text-sm mt-1 mb-2 px-2.5 bg-[#EEEEEF]">
                   {`${files.files.length}`}
