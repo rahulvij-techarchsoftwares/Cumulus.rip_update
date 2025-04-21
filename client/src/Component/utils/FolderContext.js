@@ -162,6 +162,7 @@ export const FolderProvider = ({ children }) => {
         setOpenMenuId(false);
         fetchFolders();
         showAlert("success", "success", "Folder deleted successfully.");
+        console.log("folder deleted successfully");
       } else {
         setMessage(response.data.message || "Failed to delete the folder.");
         showAlert("failed", "Failed", response.data.message || "Failed to delete the folder.");

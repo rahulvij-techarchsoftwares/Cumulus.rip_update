@@ -2335,40 +2335,138 @@ const [isExpanded, setIsExpanded] = useState(false);
         <>
           <div className="grid grid-cols-1 gap-4 md:hidden p-1 max-h-[50vh] overflow-y-scroll bg-white mt-2 ">
           {Array.isArray(sortedFiles) && sortedFiles.length > 0 && (
-    sortedFiles.map((item) => {
-      if (item.type === "subfolder") {
-        return (
-          <div className="border p-2 rounded">
-
-          <div key={item._id} className="flex justify-between relative ">
+  sortedFiles.map((item) => {
+    if (item.type === "subfolder") {
+      return (
+        <div key={item._id} className="border p-2 rounded">
+          <div className="flex justify-between relative">
             <div className="flex items-center gap-2">
-              <NavLink
-                onClick={() => onFolderSelect(item._id)}
-                to={`/folder/${item._id}`}
-                className="text-sm font-medium"
-              >
-                📁 {item.folder_name}
-              </NavLink>
+              {String(editFileId) === String(item._id) ? (
+                <div className="flex items-center gap-2 border-b-2 border-blue-500 pt-2">
+                  <input
+                    type="text"
+                    value={tempFName}
+                    onChange={(e) => setTempFName(e.target.value)}
+                    onBlur={() => {
+                      handleEditFolder(
+                        item._id,
+                        tempFName,
+                        setError,
+                        setEditFileId,
+                        setTempFName,
+                        fetchFolders,
+                        showAlert
+                      );
+                      fetchFiles();
+                    }}
+                    className="rounded p-1 bg-transparent outline-none"
+                    autoFocus
+                  />
+                  <button
+                    className="text-blue-500 hover:text-blue-700 px-3 py-1 bg-gray-100 rounded-md"
+                    onClick={() => {
+                      handleEditFolder(
+                        item._id,
+                        tempFName,
+                        setError,
+                        setEditFileId,
+                        setTempFName,
+                        fetchFolders,
+                        showAlert
+                      );
+                      fetchFiles();
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
+              ) : (
+                <NavLink
+                  onClick={() => onFolderSelect(item._id)}
+                  to={`/folder/${item._id}`}
+                  className="font-bold text-gray-600 truncate text-sm"
+                  style={{
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    maxWidth: "100%",
+                  }}
+                >
+                  📁 {item.folder_name}
+                </NavLink>
+              )}
+
               <span className="p-0 md:p-4 text-gray-500">
-              {item.created_at ? new Date(item.created_at).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric"
-  }) : "N/A"}
+                {item.created_at
+                  ? new Date(item.created_at).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : "N/A"}
               </span>
             </div>
-            
+
             <td className="p-0 md:p-4 text-gray-500">
-              {/* 👥 {item.sharedWith?.length > 0 ? item.sharedWith.join(", ") : "Not shared"} */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toggleEllipses(item._id);
+                }}
+              >
+                <EllipsisVertical />
+              </button>
+
+              {openMenuId === item._id && (
+                <motion.div
+                  ref={menuRef}
+                  className="absolute top-5 right-6 mt-2 w-48 bg-white shadow-lg rounded-lg text-black flex flex-col gap-y-2 p-2 z-50"
+                  initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                >
+                  {!need && (
+                    <>
+                      <button
+                        className="flex items-center gap-2 text-gray-600 hover:text-blue-500"
+                        onClick={() => {
+                          setOpenMenuId(null);
+                          setEditFileId(item._id);
+                          setTempFName(item.folder_name);
+                        }}
+                      >
+                        <img src={editicon} alt="" className="h-4" />
+                        Edit
+                      </button>
+
+                      <button
+                        className="flex items-center gap-2 text-gray-600 hover:text-red-500"
+                        onClick={() => {
+                          setDeletebutton(true);
+                          setSelectedFileId(item._id);
+                          setOpenMenuId(null);
+                          setDeletefolderid(item.folder_id?.["_id"]);
+                        }}
+                      >
+                        <img src={trashicon} alt="" className="h-4" />
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </motion.div>
+              )}
             </td>
           </div>
-          </div>
-        );
-      } else {
-        return null;
-      }
-    })
-  )}
+        </div>
+      );
+    } else {
+      return null;
+    }
+  })
+)}
+
             {Array.isArray(filteredMobileFiles) &&
               filteredMobileFiles.map((file) => (
                 <div key={file._id} className="border p-2 rounded">
@@ -2744,6 +2842,7 @@ const [isExpanded, setIsExpanded] = useState(false);
                           <NavLink
                 
                 className="flex items-center gap-2 text-blue-700 font-semibold"
+                onClick={() => onFolderSelect(item._id)}
                 to={`/folder/${item._id}`}
                 
               >
@@ -2752,6 +2851,12 @@ const [isExpanded, setIsExpanded] = useState(false);
                                   </NavLink> 
                                   }
                               </div>
+
+
+
+
+
+
                             )}
 
 
@@ -3336,43 +3441,140 @@ const [isExpanded, setIsExpanded] = useState(false);
         </>
       ) : (
         <div className="grid grid-cols-2 gap-2 md:hidden p-2  max-h-[50vh] overflow-y-scroll">
-                    {Array.isArray(sortedFiles) && sortedFiles.length > 0 && (
-    sortedFiles.map((item) => {
-      if (item.type === "subfolder") {
-        return (
-          <div className="border p-2 rounded">
-
-          <div key={item._id} className="flex justify-between relative ">
+{Array.isArray(sortedFiles) && sortedFiles.length > 0 && (
+  sortedFiles.map((item) => {
+    if (item.type === "subfolder") {
+      return (
+        <div key={item._id} className="border p-2 rounded">
+          <div className="flex justify-between relative">
             <div className="flex items-center gap-2">
-              <NavLink
-                onClick={() => onFolderSelect(item._id)}
-                to={`/folder/${item._id}`}
-                className="text-sm font-medium"
-              >
-                📁 {item.folder_name}
-              </NavLink>
-              <span className="p-0 md:p-4 text-gray-500">
-  {item.created_at ? new Date(item.created_at).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric"
-  }) : "N/A"}
-</span>
+              {String(editFileId) === String(item._id) ? (
+                <div className="flex items-center gap-2 border-b-2 border-blue-500 pt-2">
+                  <input
+                    type="text"
+                    value={tempFName}
+                    onChange={(e) => setTempFName(e.target.value)}
+                    onBlur={() => {
+                      handleEditFolder(
+                        item._id,
+                        tempFName,
+                        setError,
+                        setEditFileId,
+                        setTempFName,
+                        fetchFolders,
+                        showAlert
+                      );
+                      fetchFiles();
+                    }}
+                    className="rounded p-1 bg-transparent outline-none"
+                    autoFocus
+                  />
+                  <button
+                    className="text-blue-500 hover:text-blue-700 px-3 py-1 bg-gray-100 rounded-md"
+                    onClick={() => {
+                      handleEditFolder(
+                        item._id,
+                        tempFName,
+                        setError,
+                        setEditFileId,
+                        setTempFName,
+                        fetchFolders,
+                        showAlert
+                      );
+                      fetchFiles();
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
+              ) : (
+                <NavLink
+                  to={`/folder/${item._id}`}
+                  className="font-bold text-gray-600 truncate text-sm"
+                  style={{
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    maxWidth: "100%",
+                  }}
+                >
+                  📁 {item.folder_name.trim()}
+                </NavLink>
+              )}
 
-           
+              <span className="p-0 md:p-4 text-gray-500">
+                {item.created_at
+                  ? new Date(item.created_at).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : "N/A"}
+              </span>
             </div>
-           
-            <td className="p-0 md:p-4 text-gray-500">
-              {/* 👥 {item.sharedWith?.length > 0 ? item.sharedWith.join(", ") : "Not shared"} */}
-            </td>
+
+            <div className="p-0 md:p-4 text-gray-500">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toggleEllipses(item._id);
+                }}
+              >
+                <EllipsisVertical />
+              </button>
+
+              {openMenuId === item._id && (
+                <motion.div
+                  ref={menuRef}
+                  className="absolute top-8 mt-2 w-48 bg-white shadow-lg rounded-lg text-black flex flex-col gap-y-2 p-2 z-50"
+                  initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                >
+                  {!need && (
+                    <>
+                      <button
+                        className="flex items-center gap-2 text-gray-600 hover:text-blue-500"
+                        onClick={() => {
+                          handleEditFile(item);
+                          setOpenMenuId(null);
+                          setEditFileId(item._id);
+                          setTempFName(item.folder_name);
+                        }}
+                      >
+                        <img src={editicon} alt="" className="h-4" />
+                        Edit
+                      </button>
+
+                      <button
+                        className="flex items-center gap-2 text-gray-600 hover:text-red-500"
+                        onClick={() => {
+                          setDeletebutton(true);
+                          setSelectedFileId(item._id);
+                          setOpenMenuId(null);
+                          setDeletefolderid(item.folder_id?.["_id"]);
+                        }}
+                      >
+                        <img src={trashicon} alt="" className="h-4" />
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </motion.div>
+              )}
+            </div>
           </div>
-          </div>
-        );
-      } else {
-        return null;
-      }
-    })
-  )}
+        </div>
+      );
+    } else {
+      return null;
+    }
+  })
+)}
+
+
           {Array.isArray(filteredMobileFiles) &&
             filteredMobileFiles.map((file) => (
               <div key={file._id} className="bg-white p-4 rounded border ">
@@ -4410,9 +4612,12 @@ const [isExpanded, setIsExpanded] = useState(false);
               <button
                 onClick={() => {
                   if (selectedFileId) {
-                    deleteFile(selectedFileId); // Call file delete
+                    console.log("if statement deleating file");
+                    deleteFile(selectedFileId); 
                     setDeletebutton(false);
+                   
                   } else {
+                    console.log("if statement deleating folder");
                     handleDeleteFolder(
                       selecteddeletefolder, 
                       setMessage,
